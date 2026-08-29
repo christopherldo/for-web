@@ -234,7 +234,7 @@ class Voice {
       },
       publishDefaults: {
         videoEncoding: VideoPresets.h720.encoding,
-        screenShareEncoding: ScreenShare1080p60.encoding,
+        screenShareEncoding: ScreenShare720p60.encoding,
       },
     });
 
