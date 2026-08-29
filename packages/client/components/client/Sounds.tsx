@@ -135,7 +135,10 @@ export class SoundController {
       }
     }
     this.lastPlayedSound = sound;
-    this.node.play();
+    this.node.volume = 0.85;
+    void this.node.play().catch((err) => {
+      console.warn("[sounds] failed to play", sound, err);
+    });
     return true;
   }
 }
