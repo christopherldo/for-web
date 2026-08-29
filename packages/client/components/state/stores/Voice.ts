@@ -14,16 +14,24 @@ const NoiseSuppresionStates: NoiseSuppresionState[] = [
 ];
 
 /**
- * Possible screen share qualities. Low is 720p@30fps, high 1080p@30fps and text is source@5fps.
+ * Possible screen share qualities.
+ * low/high = 720p/1080p @ 30fps, low60/high60 = 720p/1080p @ 60fps, text = source @ 5fps.
  */
-export type ScreenShareQualityName = "low" | "high" | "text";
+export type ScreenShareQualityName =
+  | "low"
+  | "low60"
+  | "high"
+  | "high60"
+  | "text";
 
 /**
  * Array of available screen share quality names.
  */
 export const ScreenShareQualityNames: ScreenShareQualityName[] = [
   "low",
+  "low60",
   "high",
+  "high60",
   "text",
 ];
 
@@ -79,7 +87,7 @@ export class Voice extends AbstractStore<"voice", TypeVoice> {
       echoCancellation: true,
       noiseSupression: "enhanced",
       autoGainControl: true,
-      screenShareQuality: "low",
+      screenShareQuality: "high60",
       screenShareQualityAsk: true,
       screenShareAudio: true,
       inputVolume: 1.0,

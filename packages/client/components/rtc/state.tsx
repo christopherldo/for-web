@@ -21,8 +21,13 @@ import {
   ScreenSharePresets,
   Track,
   VideoEncoding,
+  VideoPreset,
   VideoPresets,
 } from "livekit-client";
+
+/** Custom 60 FPS screen-share presets (LiveKit ships max 30fps built-ins). */
+const ScreenShare720p60 = new VideoPreset(1280, 720, 5_000_000, 60, "medium");
+const ScreenShare1080p60 = new VideoPreset(1920, 1080, 8_000_000, 60, "medium");
 import { Channel } from "stoat.js";
 
 import { SoundController, useSound } from "@revolt/client";
@@ -229,7 +234,7 @@ class Voice {
       },
       publishDefaults: {
         videoEncoding: VideoPresets.h720.encoding,
-        screenShareEncoding: ScreenSharePresets.h720fps30.encoding,
+        screenShareEncoding: ScreenShare1080p60.encoding,
       },
     });
 
@@ -426,7 +431,7 @@ class Voice {
   getEnabledScreenShareQualities(): Partial<
     Record<ScreenShareQualityName, ScreenShareQuality>
   > {
-    // Always enable low
+    // Always enable 720p @ 30 and 60
     const qualities: Partial<
       Record<ScreenShareQualityName, ScreenShareQuality>
     > = {
@@ -436,6 +441,13 @@ class Voice {
         fullName: `720p 30FPS`,
         contentHint: "motion",
         encoding: ScreenSharePresets.h720fps30.encoding,
+      },
+      low60: {
+        name: "low60",
+        resolution: ScreenShare720p60.resolution,
+        fullName: `720p 60FPS`,
+        contentHint: "motion",
+        encoding: ScreenShare720p60.encoding,
       },
     };
 
@@ -453,13 +465,21 @@ class Voice {
         contentHint: "motion",
         encoding: ScreenSharePresets.h1080fps30.encoding,
       };
-      const originalResolution = ScreenSharePresets.original.resolution;
-      originalResolution.frameRate = 5;
-      originalResolution.aspectRatio = 0;
+      qualities.high60 = {
+        name: "high60",
+        resolution: ScreenShare1080p60.resolution,
+        fullName: `1080p 60FPS`,
+        contentHint: "motion",
+        encoding: ScreenShare1080p60.encoding,
+      };
 
-      const limit = this.limits().video_resolution;
-      originalResolution.width = limit[0];
-      originalResolution.height = limit[1];
+      const originalResolution = {
+        ...ScreenSharePresets.original.resolution,
+        frameRate: 5,
+        aspectRatio: 0,
+        width: limit[0],
+        height: limit[1],
+      };
       // If both resolutions are limited, set aspect ratio
       if (originalResolution.height !== 0 && originalResolution.width !== 0) {
         originalResolution.aspectRatio =
