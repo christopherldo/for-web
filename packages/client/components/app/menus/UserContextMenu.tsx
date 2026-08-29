@@ -385,6 +385,29 @@ export function UserContextMenu(props: {
         >
           <Trans>Mute Screen Share</Trans>
         </ContextMenuButton>
+        <ContextMenuButton
+          symbol={
+            <IconSlot>
+              <Symbol
+                size={16}
+                fill={!state.voice.isWatchingScreenShare(props.user.id)}
+              >
+                visibility_off
+              </Symbol>
+            </IconSlot>
+          }
+          onClick={() => {
+            const watching = state.voice.isWatchingScreenShare(props.user.id);
+            state.voice.setWatchingScreenShare(props.user.id, !watching);
+          }}
+        >
+          <Show
+            when={state.voice.isWatchingScreenShare(props.user.id)}
+            fallback={<Trans>Watch Stream</Trans>}
+          >
+            <Trans>Stop Watching Stream</Trans>
+          </Show>
+        </ContextMenuButton>
 
         <ContextMenuDivider />
       </Show>

@@ -15,6 +15,7 @@ import { styled } from "styled-system/jsx";
 
 import { useUser } from "@revolt/markdown/users";
 import { useVoice } from "@revolt/rtc";
+import { useState } from "@revolt/state";
 import { Avatar } from "@revolt/ui/components/design";
 import { Row } from "@revolt/ui/components/layout";
 import { Symbol } from "@revolt/ui/components/utils/Symbol";
@@ -93,22 +94,30 @@ function MiniVideoTile() {
 
 function MiniVideo() {
   const track = useTrackRefContext();
+  const state = useState();
+  const participant = useEnsureParticipant();
+
+  const watching =
+    track.source !== Track.Source.ScreenShare ||
+    state.voice.isWatchingScreenShare(participant.identity);
 
   return (
-    <VideoTrack
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
-        "border-radius": "inherit",
-        "object-fit": "cover",
-        overflow: "hidden",
-      }}
-      trackRef={track as TrackReference}
-      manageSubscription={true}
-    />
+    <Show when={watching}>
+      <VideoTrack
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          "border-radius": "inherit",
+          "object-fit": "cover",
+          overflow: "hidden",
+        }}
+        trackRef={track as TrackReference}
+        manageSubscription={true}
+      />
+    </Show>
   );
 }
 

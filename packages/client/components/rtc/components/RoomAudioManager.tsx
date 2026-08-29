@@ -37,7 +37,16 @@ export function RoomAudioManager() {
     const tracks = filteredTracks();
     console.info("[rtc] filtered tracks", filteredTracks());
     for (const track of tracks) {
-      (track.publication as RemoteTrackPublication).setSubscribed(true);
+      const publication = track.publication as RemoteTrackPublication;
+      // Don't pull screen-share audio if the local user opted out of watching
+      if (
+        track.source === Track.Source.ScreenShareAudio &&
+        !state.voice.isWatchingScreenShare(track.participant.identity)
+      ) {
+        publication.setSubscribed(false);
+        continue;
+      }
+      publication.setSubscribed(true);
       console.info(track.publication);
     }
   });

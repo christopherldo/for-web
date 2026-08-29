@@ -1,3 +1,4 @@
+import { Trans } from "@lingui/solid/macro";
 import { createSignal, Show } from "solid-js";
 import {
   TrackReference,
@@ -8,7 +9,7 @@ import {
   VideoTrack,
 } from "solid-livekit-components";
 
-import { Track } from "livekit-client";
+import { RemoteTrackPublication, Track } from "livekit-client";
 import { cva } from "styled-system/css";
 import { styled } from "styled-system/jsx";
 
@@ -16,7 +17,7 @@ import { UserContextMenu } from "@revolt/app";
 import { useUser } from "@revolt/markdown/users";
 import { useVoice } from "@revolt/rtc";
 import { useState } from "@revolt/state";
-import { Avatar } from "@revolt/ui/components/design";
+import { Avatar, Button } from "@revolt/ui/components/design";
 import { Row } from "@revolt/ui/components/layout";
 import { OverflowingText } from "@revolt/ui/components/utils";
 import { Symbol } from "@revolt/ui/components/utils/Symbol";
@@ -72,6 +73,27 @@ export function ParticipantTile(props: TileProps) {
   const isVideo = () => !isVideoMuted();
   const isScreenShare = () => track.source === Track.Source.ScreenShare;
   const isSpeaking = useIsSpeaking(participant);
+  const isWatching = () =>
+    !isScreenShare() ||
+    !!user().user?.self ||
+    state.voice.isWatchingScreenShare(participant.identity);
+
+  const stopWatching = (e?: Event) => {
+    e?.stopPropagation();
+    if (user().user?.self) return;
+    const publication = track.publication as RemoteTrackPublication | undefined;
+    publication?.setSubscribed(false);
+    const audio = participant.getTrackPublication(
+      Track.Source.ScreenShareAudio,
+    );
+    (audio as RemoteTrackPublication | undefined)?.setSubscribed(false);
+    state.voice.setWatchingScreenShare(participant.identity, false);
+    if (voice.isFocus(track)) voice.toggleFocus();
+  };
+
+  const startWatching = () => {
+    state.voice.setWatchingScreenShare(participant.identity, true);
+  };
 
   const getHeight = () => {
     if (!props.focus || videoDims().height == 0) return {};
@@ -89,12 +111,15 @@ export function ParticipantTile(props: TileProps) {
         class={
           tile({
             speaking: !isScreenShare() && isSpeaking(),
-            video: isVideo() || isScreenShare(),
+            video: (isVideo() || isScreenShare()) && isWatching(),
             fullscreen: voice.layout() === "fullscreen",
             ...props,
           }) + (isScreenShare() ? " vc_tile group" : " vc_tile")
         }
-        onClick={() => voice.toggleFocus(track)}
+        onClick={() => {
+          if (isScreenShare() && !isWatching()) return;
+          voice.toggleFocus(track);
+        }}
         use:floating={{
           // TODO: Conflicts with focusing, maybe only show if clicking name itself
           //   userCard: {
@@ -113,16 +138,38 @@ export function ParticipantTile(props: TileProps) {
         style={{ ...getHeight() }}
       >
         <Show
-          when={isVideo() || isScreenShare()}
+          when={(isVideo() || isScreenShare()) && isWatching()}
           fallback={
-            <AvatarOnly>
-              <Avatar
-                src={user().avatar}
-                fallback={user().username}
-                size={48}
-                interactive={false}
-              />
-            </AvatarOnly>
+            <Show
+              when={isScreenShare() && !isWatching()}
+              fallback={
+                <AvatarOnly>
+                  <Avatar
+                    src={user().avatar}
+                    fallback={user().username}
+                    size={48}
+                    interactive={false}
+                  />
+                </AvatarOnly>
+              }
+            >
+              <WatchPrompt>
+                <Avatar
+                  src={user().avatar}
+                  fallback={user().username}
+                  size={40}
+                  interactive={false}
+                />
+                <OverflowingText>{user().username}</OverflowingText>
+                <Button
+                  size="sm"
+                  variant="filled"
+                  onPress={() => startWatching()}
+                >
+                  <Trans>Watch Stream</Trans>
+                </Button>
+              </WatchPrompt>
+            </Show>
           }
         >
           <VideoTrack
@@ -149,18 +196,29 @@ export function ParticipantTile(props: TileProps) {
             <OverflowingText>{user().username}</OverflowingText>
             <Row gap="md">
               {isScreenShare() ? (
-                <Show when={isScreenShareAudioUserMuted()}>
-                  <Symbol
-                    size={18}
-                    color={
-                      isScreenShareAudioUserMuted() === "by-user"
-                        ? "var(--md-sys-color-error)"
-                        : undefined
-                    }
-                  >
-                    no_sound
-                  </Symbol>
-                </Show>
+                <>
+                  <Show when={isWatching() && !user().user?.self}>
+                    <IconAction
+                      type="button"
+                      title="Stop watching"
+                      onClick={stopWatching}
+                    >
+                      <Symbol size={18}>visibility_off</Symbol>
+                    </IconAction>
+                  </Show>
+                  <Show when={isScreenShareAudioUserMuted()}>
+                    <Symbol
+                      size={18}
+                      color={
+                        isScreenShareAudioUserMuted() === "by-user"
+                          ? "var(--md-sys-color-error)"
+                          : undefined
+                      }
+                    >
+                      no_sound
+                    </Symbol>
+                  </Show>
+                </>
               ) : (
                 <VoiceStatefulUserIcons
                   userId={participant.identity}
@@ -248,6 +306,33 @@ const AvatarOnly = styled("div", {
       height: "30% !important",
       minHeight: "48px",
     },
+  },
+});
+
+const WatchPrompt = styled("div", {
+  base: {
+    gridArea: "1/1",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "var(--gap-md)",
+    padding: "var(--gap-md)",
+    textAlign: "center",
+    minWidth: 0,
+  },
+});
+
+const IconAction = styled("button", {
+  base: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "transparent",
+    border: "none",
+    color: "inherit",
+    cursor: "pointer",
+    padding: 0,
   },
 });
 

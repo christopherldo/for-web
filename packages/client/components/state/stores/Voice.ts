@@ -58,6 +58,8 @@ export interface TypeVoice {
 
   screenShareVolumes: Record<string, number>;
   screenShareMutes: Record<string, boolean>;
+  /** userId -> false means the local user opted out of watching that screen share */
+  screenShareWatching: Record<string, boolean>;
 }
 
 /**
@@ -98,6 +100,7 @@ export class Voice extends AbstractStore<"voice", TypeVoice> {
       userMutes: {},
       screenShareVolumes: {},
       screenShareMutes: {},
+      screenShareWatching: {},
     };
   }
 
@@ -204,6 +207,15 @@ export class Voice extends AbstractStore<"voice", TypeVoice> {
         .forEach(([k, v]) => (data.screenShareMutes[k] = v));
     }
 
+    if (typeof input.screenShareWatching === "object") {
+      Object.entries(input.screenShareWatching)
+        .filter(
+          ([userId, watching]) =>
+            typeof userId === "string" && typeof watching === "boolean",
+        )
+        .forEach(([k, v]) => (data.screenShareWatching[k] = v));
+    }
+
     return data;
   }
 
@@ -277,6 +289,20 @@ export class Voice extends AbstractStore<"voice", TypeVoice> {
    */
   getScreenShareMuted(userId: string): boolean {
     return this.get().screenShareMutes[userId] ?? true;
+  }
+
+  /**
+   * Whether we are watching a user's screen share (default: true).
+   */
+  isWatchingScreenShare(userId: string): boolean {
+    return this.get().screenShareWatching[userId] !== false;
+  }
+
+  /**
+   * Start or stop watching a user's screen share video (+ stream audio).
+   */
+  setWatchingScreenShare(userId: string, watching: boolean) {
+    this.set("screenShareWatching", userId, watching);
   }
 
   /**
