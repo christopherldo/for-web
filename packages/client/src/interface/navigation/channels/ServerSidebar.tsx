@@ -454,6 +454,7 @@ function Entry(
 ) {
   const state = useState();
   const voice = useVoice();
+  const navigate = useNavigate();
   const { openModal } = useModals();
   const { isMobile } = useDevice();
 
@@ -488,10 +489,18 @@ function Entry(
             : "normal",
   );
 
+  const channelHref = `/server/${props.channel.serverId}/channel/${props.channel.id}`;
+
   return (
     <Column gap="sm">
       <MenuButton
-        href={`/server/${props.channel.serverId}/channel/${props.channel.id}`}
+        href={channelHref}
+        onClick={() => {
+          // One-click join: opening a voice channel also connects to the call
+          if (props.channel.isVoice && !inCall()) {
+            void voice.connect(props.channel);
+          }
+        }}
         use:floating={props.menuGenerator(props.channel)}
         size="normal"
         alert={alertState()}
@@ -517,6 +526,25 @@ function Entry(
         }
         actions={
           <Show when={!isMobile}>
+            <Show when={props.channel.isVoice}>
+              <a
+                use:floating={{
+                  tooltip: {
+                    placement: "top",
+                    content: "Open chat without joining",
+                  },
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  navigate(channelHref);
+                }}
+              >
+                <Symbol size={16} fill>
+                  chat
+                </Symbol>
+              </a>
+            </Show>
             <Show when={canInvite()}>
               <a
                 use:floating={{
