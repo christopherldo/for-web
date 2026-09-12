@@ -938,6 +938,9 @@ class Voice {
     /** Vira true se o VideoFrame recusar NV12 e a gente cair pra RGBA. */
     let nv12Rejected = false;
 
+    /** 1 = ponte antiga (só maxWidth, sempre RGBA a 30fps). 2 = CaptureOptions. */
+    const nativeApi = window.soarapaDesktop?.nativeCaptureApi ?? 1;
+
     /** Último tamanho entregue, para só replanejar quando ele muda. */
     let plannedW = 0;
     let plannedH = 0;
@@ -1033,7 +1036,7 @@ class Voice {
         } catch (e) {
           // NV12 recusado por esta build: volta o capturador para RGBA em vez
           // de deixar a transmissão morrer sem imagem.
-          if (format === "nv12" && !nv12Rejected) {
+          if (format === "nv12" && !nv12Rejected && nativeApi >= 2) {
             nv12Rejected = true;
             console.warn("[rtc] VideoFrame recusou NV12, caindo pra RGBA", e);
             window.soarapaDesktop?.logShareStats?.({
@@ -1072,7 +1075,15 @@ class Voice {
       void this.finishNativeWgcEnded();
     });
 
-    window.soarapaDesktop!.startNativeCapture!(hwnd, captureOptionsFor(plan));
+    // App 1.0.27 e anteriores não conhecem CaptureOptions: lá a captura é
+    // `(hwnd, maxWidth)`, fica em 30fps e entrega RGBA. Mandar o objeto para
+    // eles faria `Number({})` virar NaN e a transmissão nunca começar, então o
+    // client se adapta em vez de exigir que todo mundo atualize junto.
+    if (nativeApi >= 2) {
+      window.soarapaDesktop!.startNativeCapture!(hwnd, captureOptionsFor(plan));
+    } else {
+      window.soarapaDesktop!.startNativeCapture!(hwnd, plan.maxWidth);
+    }
 
     const localTrack = new LocalVideoTrack(generator, undefined, true);
     const pub = await room.localParticipant.publishTrack(localTrack, {

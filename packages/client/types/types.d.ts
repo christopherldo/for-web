@@ -51,24 +51,33 @@ declare global {
         }) => void,
       ) => () => void;
       logShareStats?: (stats: Record<string, unknown>) => void;
+      /**
+       * Versão da ponte nativa. Ausente (undefined) = app 1.0.27 ou anterior,
+       * onde a captura só aceita `maxWidth` posicional e devolve RGBA.
+       */
+      nativeCaptureApi?: number;
       /** CaptureOptions do native-wgc — ver soarapa-desktop/docs-stream-quality.md. */
       startNativeCapture?: (
         hwnd: string,
-        options?: {
-          maxWidth?: number;
-          maxHeight?: number;
-          targetFps?: number;
-          nv12?: boolean;
-        },
+        options?:
+          | {
+              maxWidth?: number;
+              maxHeight?: number;
+              targetFps?: number;
+              nv12?: boolean;
+            }
+          | number,
       ) => void;
       switchNativeCapture?: (
         hwnd: string,
-        options?: {
-          maxWidth?: number;
-          maxHeight?: number;
-          targetFps?: number;
-          nv12?: boolean;
-        },
+        options?:
+          | {
+              maxWidth?: number;
+              maxHeight?: number;
+              targetFps?: number;
+              nv12?: boolean;
+            }
+          | number,
       ) => void;
       stopNativeCapture?: () => void;
       onNativeFrame?: (
