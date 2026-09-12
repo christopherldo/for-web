@@ -25,7 +25,7 @@ export function ScreenSharePickerModal(
 
   const group = createFormGroup({
     qualityName: createFormControl<ScreenShareQualityName>(
-      voice.screenShareQuality || "low60",
+      voice.screenShareQuality || "low",
     ),
     audio: createFormControl(voice.screenShareAudio),
     idx: createFormControl([0], { required: true }),

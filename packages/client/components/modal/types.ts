@@ -325,7 +325,8 @@ export type Modals =
     }
   | {
       type: "screen_share_settings";
-      trackReference: TrackReference;
+      /** Optional preview — native WGC may open settings before a track exists. */
+      trackReference?: TrackReference;
       qualities: { name: string; fullName: string }[];
       audio: boolean;
       callback: (qualityName: ScreenShareQualityName, audio: boolean) => void;

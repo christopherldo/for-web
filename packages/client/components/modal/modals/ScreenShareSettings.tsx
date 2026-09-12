@@ -17,7 +17,7 @@ export function ScreenShareSettingsModal(
 
   const group = createFormGroup({
     qualityName: createFormControl<ScreenShareQualityName>(
-      voice.screenShareQuality || "low60",
+      voice.screenShareQuality || "low",
       { required: true },
     ),
     audio: createFormControl(props.audio && voice.screenShareAudio, {
@@ -62,15 +62,19 @@ export function ScreenShareSettingsModal(
         },
       ]}
     >
-      <VideoTrack
-        trackRef={props.trackReference}
-        style={{
-          padding: "var(--gap-md)",
-          "border-radius": "var(--borderRadius-lg)",
-          "max-height": "400px",
-          "justify-self": "center",
-        }}
-      />
+      <Show when={props.trackReference}>
+        {(trackRef) => (
+          <VideoTrack
+            trackRef={trackRef()}
+            style={{
+              padding: "var(--gap-md)",
+              "border-radius": "var(--borderRadius-lg)",
+              "max-height": "400px",
+              "justify-self": "center",
+            }}
+          />
+        )}
+      </Show>
       <form onSubmit={submit}>
         <Column>
           <Form2.Select

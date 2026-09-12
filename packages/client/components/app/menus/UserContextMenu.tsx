@@ -1,6 +1,7 @@
 import { Trans } from "@lingui/solid/macro";
 import { useClient } from "@revolt/client";
 import { useModals } from "@revolt/modal";
+import { useVoice } from "@revolt/rtc";
 import { useSmartParams } from "@revolt/routing";
 import { useState } from "@revolt/state";
 import { Slider, Symbol, Text } from "@revolt/ui";
@@ -8,6 +9,7 @@ import { useNavigate } from "@solidjs/router";
 import { type JSX, Match, Show, Switch } from "solid-js";
 import type { Channel, Message, ServerMember, User } from "stoat.js";
 import { styled } from "styled-system/jsx";
+import { RemoteTrackPublication, Track } from "livekit-client";
 
 import {
   ContextMenu,
@@ -31,6 +33,7 @@ export function UserContextMenu(props: {
   // TODO: if we take serverId instead, we could dynamically fetch server member here
   // same for the floating menu I guess?
   const state = useState();
+  const voice = useVoice();
   const client = useClient();
   const navigate = useNavigate();
   const { openModal, modals } = useModals();
@@ -398,7 +401,21 @@ export function UserContextMenu(props: {
           }
           onClick={() => {
             const watching = state.voice.isWatchingScreenShare(props.user.id);
-            state.voice.setWatchingScreenShare(props.user.id, !watching);
+            if (watching) {
+              const room = voice.room();
+              const participant = room?.getParticipantByIdentity(props.user.id);
+              const video = participant?.getTrackPublication(
+                Track.Source.ScreenShare,
+              ) as RemoteTrackPublication | undefined;
+              const audio = participant?.getTrackPublication(
+                Track.Source.ScreenShareAudio,
+              ) as RemoteTrackPublication | undefined;
+              video?.setSubscribed(false);
+              audio?.setSubscribed(false);
+              void voice.setWatching(props.user.id, false);
+            } else {
+              void voice.setWatching(props.user.id, true);
+            }
           }}
         >
           <Show

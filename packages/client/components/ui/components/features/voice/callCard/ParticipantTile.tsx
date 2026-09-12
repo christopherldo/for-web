@@ -87,12 +87,12 @@ export function ParticipantTile(props: TileProps) {
       Track.Source.ScreenShareAudio,
     );
     (audio as RemoteTrackPublication | undefined)?.setSubscribed(false);
-    state.voice.setWatchingScreenShare(participant.identity, false);
+    void voice.setWatching(participant.identity, false);
     if (voice.isFocus(track)) voice.toggleFocus();
   };
 
   const startWatching = () => {
-    state.voice.setWatchingScreenShare(participant.identity, true);
+    void voice.setWatching(participant.identity, true);
   };
 
   const getHeight = () => {
@@ -161,6 +161,10 @@ export function ParticipantTile(props: TileProps) {
                   interactive={false}
                 />
                 <OverflowingText>{user().username}</OverflowingText>
+                <ViewerBadge title="Viewers">
+                  <Symbol size={14}>visibility</Symbol>
+                  {voice.screenShareViewerCount(participant.identity)}
+                </ViewerBadge>
                 <Button
                   size="sm"
                   variant="filled"
@@ -191,9 +195,17 @@ export function ParticipantTile(props: TileProps) {
             }}
           />
         </Show>
-        <Overlay showOnHover={isScreenShare()}>
+        <Overlay showOnHover={!isScreenShare()}>
           <OverlayInner>
-            <OverflowingText>{user().username}</OverflowingText>
+            <Row gap="md" align style={{ "min-width": 0, "flex-grow": 1 }}>
+              <OverflowingText>{user().username}</OverflowingText>
+              <Show when={isScreenShare()}>
+                <ViewerBadge title="Viewers">
+                  <Symbol size={14}>visibility</Symbol>
+                  {voice.screenShareViewerCount(participant.identity)}
+                </ViewerBadge>
+              </Show>
+            </Row>
             <Row gap="md">
               {isScreenShare() ? (
                 <>
@@ -320,6 +332,19 @@ const WatchPrompt = styled("div", {
     padding: "var(--gap-md)",
     textAlign: "center",
     minWidth: 0,
+  },
+});
+
+const ViewerBadge = styled("span", {
+  base: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "4px",
+    flexShrink: 0,
+    fontSize: "12px",
+    fontWeight: 600,
+    lineHeight: 1,
+    opacity: 0.9,
   },
 });
 
