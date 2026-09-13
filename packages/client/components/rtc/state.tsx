@@ -79,6 +79,20 @@ type ScreenShareQuality = Required<
   encoding: VideoEncoding;
 };
 
+/**
+ * Escrita recusada porque o writer já fechou — ou seja, a publicação terminou.
+ *
+ * Existe para separar isto de uma falha ao CONSTRUIR o VideoFrame. Os dois
+ * chegavam no mesmo catch, e "Stream closed" no fim normal de uma transmissão
+ * era lido como "NV12 recusado", reiniciando a captura de um stream morto.
+ */
+class WriterClosedError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "WriterClosedError";
+  }
+}
+
 class Voice {
   #settings: VoiceSettings;
 
@@ -987,8 +1001,17 @@ class Voice {
             }
           : {}),
       } as VideoFrameBufferInit);
-      await this.nativeWgcWriter!.write(vf);
-      vf.close();
+
+      try {
+        await this.nativeWgcWriter!.write(vf);
+      } catch (e) {
+        // Distinguir da falha de construção acima: escrever num writer fechado
+        // é o fim normal da transmissão, não um problema de formato.
+        throw new WriterClosedError(String(e));
+      } finally {
+        // Sem isto, todo frame que falha ao escrever vaza.
+        vf.close();
+      }
     };
 
     const unsubFrame = window.soarapaDesktop!.onNativeFrame!((frame) => {
@@ -1034,6 +1057,18 @@ class Voice {
 
           await writeFrame(bytes, frame.width, frame.height, format);
         } catch (e) {
+          // O writer fechou: a publicação acabou. Parar de bombear frames é a
+          // resposta certa — reiniciar a captura aqui (o que este catch fazia
+          // ao confundir isto com formato recusado) só ressuscita um stream
+          // que já morreu.
+          if (e instanceof WriterClosedError) {
+            this.nativeWgcWriter = undefined;
+            window.soarapaDesktop?.logShareStats?.({
+              nativeFrames: "writer fechado, parando o bombeamento",
+            });
+            return;
+          }
+
           // NV12 recusado por esta build: volta o capturador para RGBA em vez
           // de deixar a transmissão morrer sem imagem.
           if (format === "nv12" && !nv12Rejected && nativeApi >= 2) {
