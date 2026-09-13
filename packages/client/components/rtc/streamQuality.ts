@@ -157,17 +157,35 @@ export function captureOptionsFor(plan: NativeQualityPlan) {
 export class BitrateGovernor {
   private target: number;
   private readonly ceiling: number;
+  private readonly startedAt: number;
   private consecutiveHealthy = 0;
 
   /** Degraus de 20%: perceptível o bastante para ajudar, sem pular demais. */
   private static readonly DOWN_STEP = 0.8;
-  private static readonly UP_STEP = 1.1;
-  /** ~5 leituras boas seguidas antes de tentar subir de novo. */
-  private static readonly HEALTHY_BEFORE_UP = 5;
+  private static readonly UP_STEP = 1.25;
+  /** ~3 leituras boas seguidas antes de tentar subir de novo. */
+  private static readonly HEALTHY_BEFORE_UP = 3;
+
+  /**
+   * Quanto tempo ignorar `qualityLimitationReason` depois que a publicação sobe.
+   *
+   * O estimador de banda do WebRTC começa baixo e sobe: nos primeiros segundos
+   * ele reporta `bandwidth` porque ainda não sondou a rede, não porque a rede
+   * seja ruim. Reagir a isso derrubou o alvo até o piso e prendeu a
+   * transmissão em 320x180 por um minuto — subindo 10% a cada 15s, ela não
+   * tinha como voltar.
+   */
+  private static readonly WARMUP_MS = 15_000;
 
   constructor(plan: NativeQualityPlan) {
     this.ceiling = plan.maxBitrate;
     this.target = plan.maxBitrate;
+    this.startedAt = Date.now();
+  }
+
+  /** Ainda no transiente de subida do estimador de banda. */
+  private warmingUp(): boolean {
+    return Date.now() - this.startedAt < BitrateGovernor.WARMUP_MS;
   }
 
   current(): number {
@@ -185,6 +203,10 @@ export class BitrateGovernor {
     qualityLimitationReason: string,
     availableOutgoingBitrate?: number,
   ): number | null {
+    // Durante o aquecimento a leitura não diz nada sobre a rede: o estimador
+    // ainda está subindo. Mexer aqui é reagir a ruído.
+    if (this.warmingUp()) return null;
+
     const limited =
       qualityLimitationReason === "bandwidth" ||
       qualityLimitationReason === "cpu";
